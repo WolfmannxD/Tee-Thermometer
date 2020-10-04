@@ -14,7 +14,7 @@ SSD1306AsciiWire oled;
 OneWire oneWire(ONE_WIRE_BUS); // Setup a oneWire instance
 DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Temperature. 
 
-#define ARRAYSIZE 70 // 150
+#define ARRAYSIZE 80 // 150
 #define WAITTIME 5000 // Waiting time between computations (milliseconds)
 #define ambient_optim_interval 60000 // time interval for ambient_search
 
@@ -36,7 +36,7 @@ double time_cold = 0.0;
 double time_trink1 = 0.0;
 double time_cold1 = 0.0;
 int print_time[2]; // minutes, seconds
-int optimize_ambient_time; // time of last ambient_search
+long optimize_ambient_time = 0; // time of last ambient_search
 
 
 void setup() {
@@ -45,10 +45,9 @@ void setup() {
   sensors.setResolution(12); // Can be 9, 10, 11, 12
   //Serial.print("Resolution: ");
   //Serial.println(sensors.getResolution()); 
-  ambient_temp = 28.4; // limit of temperature used for fit
+  ambient_temp = 22.0; //28.4; // limit of temperature used for fit
   trink_temp = 60.0; // target trinking temperature
   cold_temp = 40.0; // tearget cold temperature
-  optimize_ambient_time = 60000; // one minute waiting
 
   // Setup display
   Wire.begin();
@@ -78,7 +77,7 @@ void loop() {
   sensors.requestTemperatures();
   newtemp = sensors.getTempCByIndex(0);
   newtime = millis()/1000.0; // seconds
-  if ((index > 0) &((temperatures[index-1] - newtemp) > 2)){ 
+  if ((index > 5) &((temperatures[index-1] - newtemp) > 2)){ 
     // Temperature difference of 2 degree or more
     // This filters outliers
     // Outliers can occur while drinking or moving the 
@@ -87,12 +86,17 @@ void loop() {
     return; // Probably no good value
   }
   if ((newtime - times[index-1]) > 3){ // Sekunden 
+    Serial.println(F("Adding new values."));
     addvalue(temperatures, index, newtemp);
     addvalue(times, index, newtime);
     if (index > 3) {
       // fit routine here
       linfit(times, temperatures);
-      if (millis()-optimize_ambient_time > ambient_optim_interval){
+      if ((millis()-optimize_ambient_time) > ambient_optim_interval){
+        //Serial.print("optimize_ambient_time= ");
+        //Serial.println(optimize_ambient_time);
+        //Serial.print("millis: ");
+        //Serial.println(millis());
         search_ambient_temp();
       }
     }  
@@ -243,6 +247,10 @@ void linfit(double times[], double temperatures[]){
   // convert to exponential function
   fitparams[0] = exp(a); // A
   fitparams[1] = -b;     // k
+  //Serial.print("Fitparams[0] = ");
+  //Serial.println(fitparams[0]);
+  //Serial.print("Fitparams[1]");
+  //Serial.println(fitparams[1]);
 }
 
 int estimate_time(double fitparams[], double target_temp){
@@ -261,8 +269,8 @@ int estimate_time(double fitparams[], double target_temp){
 double fit_residuals(){
   // Calculate the squared residuals between the fit and 
   // the temperature data.
-  double squared_residuals;
-  double fit_y;
+  double squared_residuals = 0.0;
+  double fit_y = 0.0;
   for (int i = 0; i<=index; i++){
     fit_y = fitparams[0]*exp(-times[i]*fitparams[1]) + ambient_temp;
     squared_residuals += pow((fit_y - temperatures[i]), 2);
@@ -279,8 +287,12 @@ void search_ambient_temp(){
   double old_ambient_temp = ambient_temp; // copy current value of 
   double new_ambient_temp;
   for (int i=-5; i <=5; i++){ // iterate over some variations of ambient_temp
-    ambient_temp = old_ambient_temp + i*0.5;
-    double new_residuals = fit_residuals();
+    //Serial.println(i);
+    ambient_temp = old_ambient_temp + i*0.5; // change ambient temperature parameter
+    linfit(times, temperatures); // compute new fit
+    double new_residuals = fit_residuals(); // compute residuals
+    //Serial.print("residuals: ");
+    //Serial.println(new_residuals);
     if (new_residuals < residuals){ // check if new value is better
       new_ambient_temp = ambient_temp; // store new value of ambient_temp
       Serial.print(F("found new value for ambient_temp: "));
@@ -288,6 +300,8 @@ void search_ambient_temp(){
     }
   }
   ambient_temp = new_ambient_temp; // update value of ambient_time
+  linfit(times, temperatures); // compute final fit with regular values
+  optimize_ambient_time = millis(); // update time of last function call
 }
 
 
