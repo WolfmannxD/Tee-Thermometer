@@ -20,7 +20,7 @@ Temperaturvorhersage --> [*]
 
 @enduml
 
-@startuml
+@startuml "Tea Time Application"
 
 class OledDisplay {
     display : SSD1306AsciiWire
@@ -71,6 +71,10 @@ class MQTT {
     void sendTimeCold()
 }
 
+class SerialOutput {
+
+}
+
 class Parameters {
     refreshRate : int
     targetTemp : double
@@ -101,11 +105,14 @@ DataInput <|.. SerialTempInput
 DataOutput <|.. OledDisplay
 DataOutput <|.. WebServer
 DataOutput <|.. MQTT
+DataOutput <|.. SerialOutput
 TeaTimer <-- OledDisplay
 TeaTimer <-- WebServer
 TeaTimer <-- MQTT
+TeaTimer <-- SerialOutput
 TeaTimer o-- Parameters
 
+SerialOutput --> SerialInterface
 SerialTempInput --> SerialInterface
 Parameters --> SerialInterface
 
