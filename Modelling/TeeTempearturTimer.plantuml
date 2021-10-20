@@ -1,0 +1,121 @@
+@startuml
+
+(*) --> "Aufwärmphase"
+
+"Aufwärmphase" --> "Messungen"
+
+"Messungen"  --> (*)
+
+@enduml
+
+@startuml
+
+[*] --> Aufwärmphase
+Aufwärmphase: Warte bis Temperatur fällt
+
+Aufwärmphase --> Temperaturvorhersage
+Temperaturvorhersage: Messwerte aufzeichnen
+
+Temperaturvorhersage --> [*]
+
+@enduml
+
+@startuml
+
+class OledDisplay {
+    display : SSD1306AsciiWire
+    
+    void initializeDisplay()
+    void showHeating()
+    void updateRemainingTime()
+}
+
+class TemperatureSensor {
+    - sensor : DallasTemperature
+}
+
+class SerialTempInput {
+}
+
+class SerialInterface {
+    - serial : Serial
+
+    + void handleSerial()
+}
+
+class TeaTimer {
+    temperatures[] : double
+    times[] : double
+    - temp[] : double
+    - index : int
+    - timeDrink : double
+    - timeCold : double
+
+    void addData(double, double)
+    void computeTimes()
+    void updateAmbientTemp()
+    void updateDataOutput()
+}
+
+class WebServer {
+
+}
+hide WebServer members
+
+class MQTT {
+    ip_address: string
+    port: string
+    void reconnect()
+    void sendTemperature()
+    void sendTimeDrink()
+    void sendTimeCold()
+}
+
+class Parameters {
+    refreshRate : int
+    targetTemp : double
+    coldTemp : double
+    .. IP settings ..
+    ipAddress : string
+    SSID : string
+    Password : string
+    --
+    
+    + bool setParam()
+    + any getParam()
+}
+
+interface DataOutput {
+    void updateDisplayedData()
+}
+
+interface DataInput {
+    double getTemperature()
+}
+
+
+TeaTimer <-- TemperatureSensor
+TeaTimer <-- SerialTempInput
+DataInput <|.. TemperatureSensor
+DataInput <|.. SerialTempInput
+DataOutput <|.. OledDisplay
+DataOutput <|.. WebServer
+DataOutput <|.. MQTT
+TeaTimer <-- OledDisplay
+TeaTimer <-- WebServer
+TeaTimer <-- MQTT
+TeaTimer o-- Parameters
+
+SerialTempInput --> SerialInterface
+Parameters --> SerialInterface
+
+note "Not in release v1 ;-)" as not_now_note
+WebServer .. not_now_note
+MQTT .. not_now_note
+
+note "Configuration of the device" as config_note
+config_note .. Parameters
+
+note right of SerialInterface: For config and testing
+
+@enduml
