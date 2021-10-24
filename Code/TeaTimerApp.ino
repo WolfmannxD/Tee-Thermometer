@@ -15,23 +15,19 @@
 // State of the system
 bool SERIAL_ACTIVE{false};
 SerialTempInput dataInput;
-SerialInterface serial;
+SerialInterface *serial;
 
 // the setup function is run once after startup
 void setup() {
-    serial = SerialInterface(); // Serial.begin etc. inside constructor
-    SERIAL_ACTIVE = serial.initSuccessful;
-    if (SERIAL_ACTIVE)
-    {
-        dataInput = SerialTempInput(serial);
-    };
+    serial = new SerialInterface(); // Serial.begin etc. inside constructor
+    dataInput = SerialTempInput(serial);
 }
 
 // the loop function is looped indefinitely after setup
 void loop() {
     static double T;
-    serial.handleSerial();
+    serial->handleSerial();
     T = dataInput.getTemperature();
-    delay(5000);
-    serial.write_str(String(T));
+    delay(2000);
+    serial->write_str(String(T));
 }

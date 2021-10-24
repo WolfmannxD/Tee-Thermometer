@@ -8,7 +8,7 @@
 class TeaTimer;          // main class
 class Parameters;        // hold config parameters
 class TemperatureSensor; // provides interface to sensor
-class SerialTempInput;       // simulates sensor with received data
+class SerialTempInput;   // simulates sensor with received data
 class SerialOutput;      // print output over serial
 class SerialInterface;   // handles serial communication
 class MQTTOutput;        // publish temperature and times via mqtt
@@ -65,26 +65,34 @@ public:
 
     void write_str(String data)
     {
-        Serial.println(data); 
+        Serial.println(data);
     }
 
+    void write_double(double data)
+    {
+        Serial.println(data);
+    }
+
+    // can we use serialEvent ?
     void handleSerial()
-    {   
+    {
         String received;
         String prefix;
         String content;
-        while (Serial.available() > 0){
-            received = Serial.readString();
+        while (Serial.available() > 0)
+        {
+            received = Serial.readStringUntil(char('\n'));
             prefix = received.substring(0, 4);
             content = received.substring(4);
-            if (prefix == "data") {
+            if (prefix == "data")
+            {
                 // add temperature data
-                TInput.push(std::stod(content.c_str()));  // convert string to double
-                Serial.println("Added "+content+" to the temperature queue.");
+                TInput.push(std::stod(content.c_str())); // convert string to double
+                Serial.println("Added " + content + " to the temperature queue.");
             }
-            else if (prefix == "comm") {
+            else if (prefix == "comm")
+            {
                 // execute command
-                
             }
         };
     }
@@ -95,34 +103,34 @@ Provide simulated temperature values via
 serial input.
 */
 class SerialTempInput
-{   
-    private:
-    SerialInterface serial;
-    public:
-    SerialTempInput(SerialInterface &SerialIF)
+{
+private:
+    SerialInterface *serial;
+
+public:
+    SerialTempInput(SerialInterface *SerialIF)
     {
         serial = SerialIF;
     }
     SerialTempInput()
     {
-
+        SerialInterface serial = SerialInterface();
+        serial.write_str("Falscher constructor");
     }
 
-    double getTemperature() 
-    {   
+    double getTemperature()
+    {
         double temp;
-        if (serial.TInput.empty())
+        if (serial->TInput.empty())
         {
             temp = 25.5;
         }
         else
         {
-            temp = serial.TInput.back();
-            serial.TInput.pop();
-        
+            temp = serial->TInput.front();
+            serial->TInput.pop();
         }
         return temp;
     }
-
 };
 #endif
