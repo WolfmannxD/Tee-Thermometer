@@ -1,26 +1,27 @@
-@startuml
+@startuml State
+header TeaTemperatureTimer
+title State Diagram
 
-(*) --> "Aufwärmphase"
+[*] --> WarmupPhase
+WarmupPhase: Wait for decreasing temperature
 
-"Aufwärmphase" --> "Messungen"
-
-"Messungen"  --> (*)
-
-@enduml
-
-@startuml
-
-[*] --> Aufwärmphase
-Aufwärmphase: Warte bis Temperatur fällt
-
-Aufwärmphase --> Temperaturvorhersage
-Temperaturvorhersage: Messwerte aufzeichnen
-
-Temperaturvorhersage --> [*]
+WarmupPhase --> TemperaturePrediction
+state TemperaturePrediction {
+    [*] --> DataAcquisition
+    DataAcquisition : Get current temperature
+    DataAcquisition --> DataProcessing 
+    DataProcessing : Calculate predicted times
+    DataProcessing --> DataOutput
+    DataOutput : Update display
+    DataOutput --> DataAcquisition
+}
 
 @enduml
 
-@startuml "Tea Time Application"
+
+@startuml Tea Timer Application
+header TeaTemperatureTimer
+title Tea Timer Application
 
 class OledDisplay {
     display : SSD1306AsciiWire
@@ -124,5 +125,33 @@ note "Configuration of the device" as config_note
 config_note .. Parameters
 
 note right of SerialInterface: For config and testing
+
+@enduml
+
+
+@startuml Sequence
+header TeaTemperatureTimer
+title Program sequence
+
+control TeaTimer
+participant SerialTempInput
+boundary SerialInterface
+participant SerialOutput
+
+SerialInterface -> SerialInterface : handleSerial
+group Data acquisition
+TeaTimer -> SerialTempInput : getTemperature
+SerialTempInput -> SerialInterface : get temp from \ninput queue
+TeaTimer <-- SerialTempInput : Return temperature
+end
+group Data processing
+TeaTimer -> TeaTimer : Get Timestamp
+TeaTimer -> TeaTimer : addData
+TeaTimer -> TeaTimer : computeTimes
+end
+group Data output
+TeaTimer -> SerialOutput : updateDisplayedData
+SerialOutput -> SerialInterface : add predicted times \nto output queue
+end
 
 @enduml
